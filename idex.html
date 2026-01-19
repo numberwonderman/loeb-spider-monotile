@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<body style="background: #1a1a1a; color: white; margin: 0; overflow: hidden;">
+    <canvas id="spiderCanvas"></canvas>
+    <div style="position: absolute; top: 10px; left: 10px; font-family: sans-serif;">
+        <h2>Spider Crystal Growth</h2>
+        <p>Franklin Loeb - Recursive Tiling Experiment</p>
+    </div>
+
+<script>
+const canvas = document.getElementById('spiderCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// --- CONFIGURATION (Tweak these to find the Monotile!) ---
+const MAX_DEPTH = 5;
+const LEG_COUNT = 6;      // Try 3, 5, 6, or 8
+const SCALE_FACTOR = 0.45; // How much smaller the next layer is
+const ROTATION = 0.5;      // Angle offset for the "limbs"
+// ---------------------------------------------------------
+
+function drawSpider(x, y, size, angle, depth) {
+    if (depth <= 0) return;
+
+    // Draw the "Body" (the unit tile)
+    ctx.beginPath();
+    ctx.strokeStyle = `hsl(${depth * 40}, 70%, 60%)`;
+    ctx.lineWidth = depth;
+    
+    // Draw a simple "spider" shape
+    for (let i = 0; i < LEG_COUNT; i++) {
+        let legAngle = angle + (i * (Math.PI * 2) / LEG_COUNT);
+        let endX = x + Math.cos(legAngle) * size;
+        let endY = y + Math.sin(legAngle) * size;
+        
+        ctx.moveTo(x, y);
+        ctx.lineTo(endX, endY);
+        
+        // Recursive step: Grow a new spider at the end of each leg
+        drawSpider(endX, endY, size * SCALE_FACTOR, legAngle + ROTATION, depth - 1);
+    }
+    ctx.stroke();
+}
+
+// Initial center point
+ctx.translate(canvas.width / 2, canvas.height / 2);
+drawSpider(0, 0, 150, 0, MAX_DEPTH);
+
+</script>
+</body>
+</html>
