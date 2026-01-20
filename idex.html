@@ -1,58 +1,117 @@
 <!DOCTYPE html>
 <html>
-<body style="background: #111; color: #fb1; margin: 0; overflow: hidden;">
-    <canvas id="spiderCanvas"></canvas>
-    <div style="position: absolute; top: 10px; left: 10px; font-family: monospace; pointer-events: none;">
-        <h2>LOEB SPIDER-MONOTILE</h2>
-        <p>Aperiodic Substitution Experiment</p>
+<body style="background: #111; color: #fb1; margin: 0; display: flex; font-family: monospace;">
+    <div style="width: 250px; padding: 20px; background: #222; border-right: 1px solid #444; z-index: 10; overflow-y: auto; height: 100vh;">
+        <h2 style="margin-top:0">LOEB SPIDER</h2>
+        <p style="font-size: 0.8em; color: #888;">Franklin Loeb - Monotile Search</p>
+        <hr border="0" style="border-top:1px solid #444">
+        
+        <label>Legs: <span id="legVal">6</span></label><br>
+        <input type="range" id="legCount" min="3" max="12" value="6" style="width:100%"><br><br>
+
+        <label>Scale: <span id="scaleVal">0.52</span></label><br>
+        <input type="range" id="scaleFactor" min="0.3" max="0.7" step="0.01" value="0.52" style="width:100%"><br><br>
+
+        <label>Rotation: <span id="rotVal">0.5</span></label><br>
+        <input type="range" id="rotation" min="-3.14" max="3.14" step="0.05" value="0.5" style="width:100%"><br><br>
+
+        <label>Knee Bend: <span id="kneeVal">0.8</span></label><br>
+        <input type="range" id="kneeBend" min="-3.14" max="3.14" step="0.05" value="0.8" style="width:100%"><br><br>
+
+        <label>Ankle Bend: <span id="ankleVal">0.0</span></label><br>
+        <input type="range" id="ankleBend" min="-3.14" max="3.14" step="0.05" value="0.0" style="width:100%"><br><br>
+
+        <label>Depth: <span id="depthVal">5</span></label><br>
+        <input type="range" id="maxDepth" min="1" max="7" value="5" style="width:100%"><br><br>
+        
+        <button onclick="saveSnapshot()" style="width:100%; padding:10px; cursor:pointer; background:#fb1; border:none; font-weight:bold;">Log Snapshot</button>
     </div>
+
+    <canvas id="spiderCanvas" style="flex-grow:1;"></canvas>
 
 <script>
 const canvas = document.getElementById('spiderCanvas');
 const ctx = canvas.getContext('2d');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
 
-// --- EXPERIMENT PARAMETERS ---
-const MAX_DEPTH = 5;
-const LEG_COUNT = 6;
-const SCALE_FACTOR = 0.52; // Slightly larger to close the "lacunae"
-const ROTATION = 0.5;     // The spiral "twist"
-const JOINT_BEND = 0.8;    // The "hook" that fills the holes
-const SEGMENT_RATIO = 0.5; // Knee position
-// -----------------------------
+function updateCanvasSize() {
+    canvas.width = window.innerWidth - 250;
+    canvas.height = window.innerHeight;
+}
+window.onresize = updateCanvasSize;
+updateCanvasSize();
 
-function drawSpider(x, y, size, angle, depth) {
+// Inputs
+const inputs = ['legCount', 'scaleFactor', 'rotation', 'kneeBend', 'ankleBend', 'maxDepth'];
+inputs.forEach(id => {
+    document.getElementById(id).oninput = () => {
+        document.getElementById(id.replace('Count','Val').replace('Factor','Val').replace('ion','Val').replace('Bend','Val').replace('Depth','Val')).innerText = document.getElementById(id).value;
+        draw();
+    };
+});
+
+function drawSpider(x, y, size, angle, depth, params) {
     if (depth <= 0) return;
 
     ctx.beginPath();
     ctx.strokeStyle = `hsl(${depth * 45}, 80%, 60%)`;
     ctx.lineWidth = depth;
     
-    for (let i = 0; i < LEG_COUNT; i++) {
-        let legAngle = angle + (i * (Math.PI * 2) / LEG_COUNT);
+    for (let i = 0; i < params.legs; i++) {
+        let legAngle = angle + (i * (Math.PI * 2) / params.legs);
         
-        // 1. Joint (The "Knee")
-        let kX = x + Math.cos(legAngle) * (size * SEGMENT_RATIO);
-        let kY = y + Math.sin(legAngle) * (size * SEGMENT_RATIO);
+        // Joint 1: Knee
+        let kX = x + Math.cos(legAngle) * (size * 0.33);
+        let kY = y + Math.sin(legAngle) * (size * 0.33);
         
-        // 2. Foot (The "Hook")
-        let footAngle = legAngle + JOINT_BEND;
-        let fX = kX + Math.cos(footAngle) * (size * (1 - SEGMENT_RATIO));
-        let fY = kY + Math.sin(footAngle) * (size * (1 - SEGMENT_RATIO));
+        // Joint 2: Ankle (New variable!)
+        let ankleAngle = legAngle + params.knee;
+        let aX = kX + Math.cos(ankleAngle) * (size * 0.33);
+        let aY = kY + Math.sin(ankleAngle) * (size * 0.33);
+
+        // Joint 3: Foot
+        let footAngle = ankleAngle + params.ankle;
+        let fX = aX + Math.cos(footAngle) * (size * 0.33);
+        let fY = aY + Math.sin(footAngle) * (size * 0.33);
 
         ctx.moveTo(x, y);
         ctx.lineTo(kX, kY); 
+        ctx.lineTo(aX, aY);
         ctx.lineTo(fX, fY);
         
-        // Recurse: Each foot becomes the center of a new, smaller spider
-        drawSpider(fX, fY, size * SCALE_FACTOR, footAngle + ROTATION, depth - 1);
+        drawSpider(fX, fY, size * params.scale, footAngle + params.rot, depth - 1, params);
     }
     ctx.stroke();
 }
 
-ctx.translate(canvas.width / 2, canvas.height / 2);
-drawSpider(0, 0, 160, 0, MAX_DEPTH);
+function draw() {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    
+    const params = {
+        legs: parseInt(document.getElementById('legCount').value),
+        scale: parseFloat(document.getElementById('scaleFactor').value),
+        rot: parseFloat(document.getElementById('rotation').value),
+        knee: parseFloat(document.getElementById('kneeBend').value),
+        ankle: parseFloat(document.getElementById('ankleBend').value)
+    };
+    const depth = parseInt(document.getElementById('maxDepth').value);
+    
+    drawSpider(0, 0, 150, 0, depth, params);
+}
+
+function saveSnapshot() {
+    console.log("Current Loeb Parameters:", {
+        Legs: document.getElementById('legCount').value,
+        Scale: document.getElementById('scaleFactor').value,
+        Rotation: document.getElementById('rotation').value,
+        Knee: document.getElementById('kneeBend').value,
+        Ankle: document.getElementById('ankleBend').value
+    });
+    alert("Parameters logged to Console!");
+}
+
+draw();
 </script>
 </body>
 </html>
