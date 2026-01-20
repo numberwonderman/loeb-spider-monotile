@@ -1,30 +1,36 @@
 <!DOCTYPE html>
 <html>
 <body style="background: #111; color: #fb1; margin: 0; display: flex; font-family: monospace;">
-    <div style="width: 250px; padding: 20px; background: #222; border-right: 1px solid #444; z-index: 10; overflow-y: auto; height: 100vh;">
-        <h2 style="margin-top:0">LOEB SPIDER</h2>
-        <p style="font-size: 0.8em; color: #888;">Franklin Loeb - Monotile Search</p>
+    <div style="width: 260px; padding: 20px; background: #222; border-right: 1px solid #444; z-index: 10; overflow-y: auto; height: 100vh; box-sizing: border-box;">
+        <h2 style="margin-top:0">LOEB ZOO</h2>
+        <p style="font-size: 0.8em; color: #888;">Monotile Search Lab</p>
         <hr border="0" style="border-top:1px solid #444">
         
-        <label>Legs: <span id="legVal">6</span></label><br>
-        <input type="range" id="legCount" min="3" max="12" value="6" style="width:100%"><br><br>
+        <label>Legs: <span id="legVal">8</span></label><br>
+        <input type="range" id="legCount" min="3" max="12" value="8" style="width:100%"><br><br>
 
         <label>Scale: <span id="scaleVal">0.52</span></label><br>
         <input type="range" id="scaleFactor" min="0.3" max="0.7" step="0.01" value="0.52" style="width:100%"><br><br>
 
-        <label>Rotation: <span id="rotVal">0.5</span></label><br>
-        <input type="range" id="rotation" min="-3.14" max="3.14" step="0.05" value="0.5" style="width:100%"><br><br>
+        <label>Rotation: <span id="rotVal">0.51</span></label><br>
+        <input type="range" id="rotation" min="-3.14" max="3.14" step="0.01" value="0.51" style="width:100%"><br><br>
 
-        <label>Knee Bend: <span id="kneeVal">0.8</span></label><br>
-        <input type="range" id="kneeBend" min="-3.14" max="3.14" step="0.05" value="0.8" style="width:100%"><br><br>
+        <label>Knee: <span id="kneeVal">0.81</span></label><br>
+        <input type="range" id="kneeBend" min="-3.14" max="3.14" step="0.01" value="0.81" style="width:100%"><br><br>
 
-        <label>Ankle Bend: <span id="ankleVal">0.0</span></label><br>
-        <input type="range" id="ankleBend" min="-3.14" max="3.14" step="0.05" value="0.0" style="width:100%"><br><br>
+        <label>Ankle: <span id="ankleVal">0.86</span></label><br>
+        <input type="range" id="ankleBend" min="-3.14" max="3.14" step="0.01" value="0.86" style="width:100%"><br><br>
 
         <label>Depth: <span id="depthVal">5</span></label><br>
         <input type="range" id="maxDepth" min="1" max="7" value="5" style="width:100%"><br><br>
         
-        <button onclick="saveSnapshot()" style="width:100%; padding:10px; cursor:pointer; background:#fb1; border:none; font-weight:bold;">Log Snapshot</button>
+        <button onclick="randomize()" style="width:100%; padding:10px; cursor:pointer; background:#444; color:white; border:none; margin-bottom:5px;">Mutate Species</button>
+        <button onclick="saveSnapshot()" style="width:100%; padding:10px; cursor:pointer; background:#fb1; border:none; font-weight:bold;">Log Specimen</button>
+        
+        <hr border="0" style="border-top:1px solid #444; margin: 20px 0;">
+        <p style="font-size: 0.8em; color: #888;">SPECIES GALLERY</p>
+        <button onclick="loadSpecies(8, 0.52, 0.51, 0.81, 0.86)" style="width:100%; background:none; border:1px solid #444; color:#fb1; cursor:pointer; margin-bottom:5px;">The Spiral Coin</button>
+        <button onclick="loadSpecies(6, 0.48, 0.6, 0.8, 0.0)" style="width:100%; background:none; border:1px solid #444; color:#fb1; cursor:pointer; margin-bottom:5px;">Standard Spider</button>
     </div>
 
     <canvas id="spiderCanvas" style="flex-grow:1;"></canvas>
@@ -34,17 +40,26 @@ const canvas = document.getElementById('spiderCanvas');
 const ctx = canvas.getContext('2d');
 
 function updateCanvasSize() {
-    canvas.width = window.innerWidth - 250;
+    canvas.width = window.innerWidth - 260;
     canvas.height = window.innerHeight;
+    draw();
 }
 window.onresize = updateCanvasSize;
 updateCanvasSize();
 
-// Inputs
-const inputs = ['legCount', 'scaleFactor', 'rotation', 'kneeBend', 'ankleBend', 'maxDepth'];
-inputs.forEach(id => {
-    document.getElementById(id).oninput = () => {
-        document.getElementById(id.replace('Count','Val').replace('Factor','Val').replace('ion','Val').replace('Bend','Val').replace('Depth','Val')).innerText = document.getElementById(id).value;
+// Better Input Handler (Fixed the null/innerText error)
+const controls = {
+    'legCount': 'legVal',
+    'scaleFactor': 'scaleVal',
+    'rotation': 'rotVal',
+    'kneeBend': 'kneeVal',
+    'ankleBend': 'ankleVal',
+    'maxDepth': 'depthVal'
+};
+
+Object.keys(controls).forEach(id => {
+    document.getElementById(id).oninput = (e) => {
+        document.getElementById(controls[id]).innerText = e.target.value;
         draw();
     };
 });
@@ -53,25 +68,23 @@ function drawSpider(x, y, size, angle, depth, params) {
     if (depth <= 0) return;
 
     ctx.beginPath();
-    ctx.strokeStyle = `hsl(${depth * 45}, 80%, 60%)`;
+    ctx.strokeStyle = `hsl(${(depth * 40) + 20}, 80%, 60%)`;
     ctx.lineWidth = depth;
     
     for (let i = 0; i < params.legs; i++) {
         let legAngle = angle + (i * (Math.PI * 2) / params.legs);
+        let seg = size * 0.33;
         
-        // Joint 1: Knee
-        let kX = x + Math.cos(legAngle) * (size * 0.33);
-        let kY = y + Math.sin(legAngle) * (size * 0.33);
+        let kX = x + Math.cos(legAngle) * seg;
+        let kY = y + Math.sin(legAngle) * seg;
         
-        // Joint 2: Ankle (New variable!)
         let ankleAngle = legAngle + params.knee;
-        let aX = kX + Math.cos(ankleAngle) * (size * 0.33);
-        let aY = kY + Math.sin(ankleAngle) * (size * 0.33);
+        let aX = kX + Math.cos(ankleAngle) * seg;
+        let aY = kY + Math.sin(ankleAngle) * seg;
 
-        // Joint 3: Foot
         let footAngle = ankleAngle + params.ankle;
-        let fX = aX + Math.cos(footAngle) * (size * 0.33);
-        let fY = aY + Math.sin(footAngle) * (size * 0.33);
+        let fX = aX + Math.cos(footAngle) * seg;
+        let fY = aY + Math.sin(footAngle) * seg;
 
         ctx.moveTo(x, y);
         ctx.lineTo(kX, kY); 
@@ -96,19 +109,41 @@ function draw() {
         ankle: parseFloat(document.getElementById('ankleBend').value)
     };
     const depth = parseInt(document.getElementById('maxDepth').value);
-    
-    drawSpider(0, 0, 150, 0, depth, params);
+    drawSpider(0, 0, 160, 0, depth, params);
+}
+
+function randomize() {
+    document.getElementById('rotation').value = (Math.random() * 6.28 - 3.14).toFixed(2);
+    document.getElementById('kneeBend').value = (Math.random() * 6.28 - 3.14).toFixed(2);
+    document.getElementById('ankleBend').value = (Math.random() * 6.28 - 3.14).toFixed(2);
+    // Update labels
+    Object.keys(controls).forEach(id => {
+        document.getElementById(controls[id]).innerText = document.getElementById(id).value;
+    });
+    draw();
+}
+
+function loadSpecies(l, s, r, k, a) {
+    document.getElementById('legCount').value = l;
+    document.getElementById('scaleFactor').value = s;
+    document.getElementById('rotation').value = r;
+    document.getElementById('kneeBend').value = k;
+    document.getElementById('ankleBend').value = a;
+    Object.keys(controls).forEach(id => {
+        document.getElementById(controls[id]).innerText = document.getElementById(id).value;
+    });
+    draw();
 }
 
 function saveSnapshot() {
-    console.log("Current Loeb Parameters:", {
+    console.log("SPECIMEN LOGGED:", {
         Legs: document.getElementById('legCount').value,
         Scale: document.getElementById('scaleFactor').value,
         Rotation: document.getElementById('rotation').value,
         Knee: document.getElementById('kneeBend').value,
         Ankle: document.getElementById('ankleBend').value
     });
-    alert("Parameters logged to Console!");
+    alert("Specimen details saved to Console!");
 }
 
 draw();
