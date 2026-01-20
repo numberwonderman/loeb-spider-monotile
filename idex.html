@@ -2,7 +2,7 @@
 <html>
 <body style="background: #111; color: #fb1; margin: 0; display: flex; font-family: monospace;">
     <div style="width: 260px; padding: 20px; background: #222; border-right: 1px solid #444; z-index: 10; overflow-y: auto; height: 100vh; box-sizing: border-box;">
-        <h2 style="margin-top:0">LOEB ZOO</h2>
+        <h2 style="margin-top:0">LOEB Spider-monotile Explorer  </h2>
         <p style="font-size: 0.8em; color: #888;">Monotile Search Lab</p>
         <hr border="0" style="border-top:1px solid #444">
         
@@ -36,8 +36,9 @@
     <canvas id="spiderCanvas" style="flex-grow:1;"></canvas>
 
 <script>
-const canvas = document.getElementById('spiderCanvas');
+ const canvas = document.getElementById('spiderCanvas');
 const ctx = canvas.getContext('2d');
+let occupancyMap = new Set(); // Must be global
 
 function updateCanvasSize() {
     canvas.width = window.innerWidth - 260;
@@ -47,7 +48,6 @@ function updateCanvasSize() {
 window.onresize = updateCanvasSize;
 updateCanvasSize();
 
-// Better Input Handler (Fixed the null/innerText error)
 const controls = {
     'legCount': 'legVal',
     'scaleFactor': 'scaleVal',
@@ -64,13 +64,17 @@ Object.keys(controls).forEach(id => {
     };
 });
 
+function checkCollision(x, y) {
+    const precision = 8; // Adjust this to change how sensitive the 'red' alert is
+    const key = `${Math.round(x/precision)},${Math.round(y/precision)}`;
+    if (occupancyMap.has(key)) return true;
+    occupancyMap.add(key);
+    return false;
+}
+
 function drawSpider(x, y, size, angle, depth, params) {
     if (depth <= 0) return;
 
-    ctx.beginPath();
-    ctx.strokeStyle = `hsl(${(depth * 40) + 20}, 80%, 60%)`;
-    ctx.lineWidth = depth;
-    
     for (let i = 0; i < params.legs; i++) {
         let legAngle = angle + (i * (Math.PI * 2) / params.legs);
         let seg = size * 0.33;
@@ -86,17 +90,27 @@ function drawSpider(x, y, size, angle, depth, params) {
         let fX = aX + Math.cos(footAngle) * seg;
         let fY = aY + Math.sin(footAngle) * seg;
 
+        // Check if the foot of this segment hits an existing path
+        let isColliding = checkCollision(fX, fY);
+
+        ctx.beginPath();
+        ctx.strokeStyle = isColliding ? "red" : `hsl(${(depth * 40) + 20}, 80%, 60%)`;
+        ctx.lineWidth = depth;
         ctx.moveTo(x, y);
         ctx.lineTo(kX, kY); 
         ctx.lineTo(aX, aY);
         ctx.lineTo(fX, fY);
+        ctx.stroke();
         
-        drawSpider(fX, fY, size * params.scale, footAngle + params.rot, depth - 1, params);
+        // If it's not red (colliding), keep growing the crystal
+        if (!isColliding) {
+            drawSpider(fX, fY, size * params.scale, footAngle + params.rot, depth - 1, params);
+        }
     }
-    ctx.stroke();
 }
 
 function draw() {
+    occupancyMap.clear(); // Clear memory for new slider position
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.translate(canvas.width / 2, canvas.height / 2);
@@ -116,7 +130,6 @@ function randomize() {
     document.getElementById('rotation').value = (Math.random() * 6.28 - 3.14).toFixed(2);
     document.getElementById('kneeBend').value = (Math.random() * 6.28 - 3.14).toFixed(2);
     document.getElementById('ankleBend').value = (Math.random() * 6.28 - 3.14).toFixed(2);
-    // Update labels
     Object.keys(controls).forEach(id => {
         document.getElementById(controls[id]).innerText = document.getElementById(id).value;
     });
@@ -145,6 +158,8 @@ function saveSnapshot() {
     });
     alert("Specimen details saved to Console!");
 }
+
+draw();
 
 draw();
 </script>
