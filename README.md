@@ -2,38 +2,52 @@
 ### Recursive Growth & The Search for Infinite Heesch Numbers
 
 ## Overview
-This repository is dedicated to the computational search for a **Strictly Aperiodic Rep-tile Monotile**. 
+This repository houses a computational search laboratory dedicated to exploring the boundaries of **Strictly Aperiodic Monotiles** and fractal space-filling curves. 
 
-Inspired by the study of **Heesch numbers**—the number of times a shape can be completely surrounded by copies of itself before a tiling failure occurs—this project explores a unique "Spider-like" growth model. The goal is to identify a shape that uses recursive, self-similar expansion to bypass the "Heesch trap," effectively reaching a Heesch number of **infinity**.
+Inspired by **Heesch numbers**—the maximum number of times a shape can be completely surrounded by copies of itself before a tiling failure becomes mathematically inevitable—this project simulates a unique "Spider-like" growth model. The objective is to identify parametric configurations where recursive, self-similar expansion bypasses local "Heesch traps," effectively projecting toward a Heesch number of $\infty$.
+
+---
 
 ## The Theory: The Spider & The Crystal
-Traditional tiling research often focuses on how shapes interlock like puzzle pieces. This project approaches the problem through the lens of **Biological/Crystal Growth**:
+Traditional tiling research often analyzes how rigid polygons interlock along discrete boundaries. This project shifts the perspective toward **Biological & Crystallographic Growth Mechanics**:
 
-* **The Spider Analogy**: We hypothesize a shape with "limbs" that reach into the concavities of its neighbors.
-* **Recursive Inflation**: Unlike standard tiles, this shape is a "rep-tile." It tiles around itself to create a larger version of itself (a "metatile").
-* **Infinite Heesch Numbers**: If a shape can perfectly form a larger version of itself, it can, by definition, be surrounded infinitely, creating a fractal-like tiling of the entire plane.
+* **The Spider Analogy:** We hypothesize a topological archetype featuring flexible "limbs" that dynamically nest into the concavities of adjacent generations.
+* **Recursive Inflation:** The system explores quasi-self-similar scaling. If a clustering generation can perfectly bound a scaled-up macro-version of its fundamental unit, it implies a pathway to infinite global tiling.
+* **Bypassing the Heesch Trap:** If the local collision rules yield a gapless, non-overlapping boundary at depth $d \to \infty$, the configuration represents a candidate for an unprecedented class of non-periodic plane-fillers.
+
+---
 
 ## Technical Approach
-The exploration uses a **JavaScript/HTML5 Canvas** engine to simulate "Spider Growth" through:
-1.  **L-Systems (Lindenmayer Systems)**: Using recursive functions to define how "legs" sprout and rotate.
-2.  **Logarithmic Scaling**: Applying scaling factors ($ln$) and rotational offsets to ensure that each generation of the shape "nests" into the previous one.
-3.  **Visual Verification**: Real-time rendering of the boundary complexity to check for overlaps or gaps.
+The exploration engine leverages a high-performance **HTML5 Canvas / JavaScript** framework to simulate "Spider Growth" via three core pillars:
 
-## How to Run the Experiment
-1.  Clone this repository.
-2.  Open `index.html` in any modern web browser.
-3.  Adjust the constants in the script to evolve the shape:
-    * `LEG_COUNT`: Changes the symmetry of the "Spider."
-    * `SCALE_FACTOR`: Adjusts the "Inflation" rate.
-    * `ROTATION`: Changes how the limbs interlock.
+1. **Parametric L-Systems:** Recursive branching algorithms that map localized geometric transformations across scaling generations.
+2. **Logarithmic Scaling & Rotation:** Utilizing precise scaling metrics $r \in (0, 1)$ and rotational offsets $\theta$ to optimize how successive generations nest into structural voids.
+3. **Spatial Occupancy Hash-Mapping:** Real-time canvas pixel tracking via a high-precision discrete coordinate grid (`Set` hashing) to immediately flag self-intersection ("collisions") in red.
 
-## Goals
-- [ ] Catalog shapes with high Heesch numbers.
-- [ ] Identify the "Sweet Spot" parameters for gapless recursive growth.
-- [ ] Mathematically prove if a specific "Spider" shape is strictly aperiodic.
+
+
+---
+
+## Technical Parameters & Search Space
+
+When launching the interactive laboratory, use the sidebar controls to manipulate the mutation matrix:
+
+| Parameter | Range | Mathematical Function |
+| :--- | :--- | :--- |
+| **Leg Count** | $3 \to 12$ | Establishes the fundamental rotational symmetry ($2\pi / n$) |
+| **Scale Factor** | $0.30 \to 0.70$ | Controls the decay rate of successive generation segment lengths |
+| **Rotation** | $-\pi \to \pi$ | Sets the global angular twist applied to child nodes |
+| **Knee / Ankle** | $-\pi \to \pi$ | Manipulates the localized internal folding and concavity layout |
+
+---
+
+## Roadmap & Research Goals
+- [ ] **Catalog High Heesch Specimens:** Isolate and save slider configurations that survive to depth $d \ge 7$ without triggering global collision faults.
+- [ ] **Map the "Sweet Spot" Phase Space:** Define the exact boundary boundaries where scale factors and angular transformations yield gapless, non-overlapping growth.
+- [ ] **Rigorous Topological Proofs:** Determine whether a valid "Spider" boundary can be rigorously formalized as a strictly chiral aperiodic tile.
 
 ## Acknowledgments
-This project was inspired by the work of **Casey Mann** and the discovery of the **"Einstein" (Aperiodic Monotile)** in 2023. Special thanks to the **Numberphile** community for fostering the obsession with Heesch numbers.
+This project is deeply indebted to the foundational work of **Dr. Casey Mann**, **Dr. Craig Kaplan**, and their co-authors during their historic 2023 discovery of the "Hat" and "Spectre" aperiodic monotiles (the Einstein tiles). 
 
 ---
 **Author:** Franklin Loeb  
