@@ -38,7 +38,8 @@
 <script>
  const canvas = document.getElementById('spiderCanvas');
 const ctx = canvas.getContext('2d');
-let occupancyMap = new Set(); // Must be global
+let segmentGrid = new Map(); // cellKey -> array of drawn segments, must be global
+const GRID_SIZE = 20; // spatial hash cell size in px
 
 function updateCanvasSize() {
     canvas.width = window.innerWidth - 260;
@@ -64,12 +65,57 @@ Object.keys(controls).forEach(id => {
     };
 });
 
-function checkCollision(x, y) {
-    const precision = 8; // Adjust this to change how sensitive the 'red' alert is
-    const key = `${Math.round(x/precision)},${Math.round(y/precision)}`;
-    if (occupancyMap.has(key)) return true;
-    occupancyMap.add(key);
+function segCross(ox, oy, ax, ay, bx, by) {
+    return (ax - ox) * (by - oy) - (ay - oy) * (bx - ox);
+}
+
+// Proper line-segment intersection (strict crossing only, so two limb
+// segments that merely share a joint endpoint don't flag as colliding).
+function segmentsIntersect(x1, y1, x2, y2, x3, y3, x4, y4) {
+    const d1 = segCross(x3, y3, x4, y4, x1, y1);
+    const d2 = segCross(x3, y3, x4, y4, x2, y2);
+    const d3 = segCross(x1, y1, x2, y2, x3, y3);
+    const d4 = segCross(x1, y1, x2, y2, x4, y4);
+    return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+           ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+}
+
+function cellsForSegment(x1, y1, x2, y2) {
+    const minX = Math.floor(Math.min(x1, x2) / GRID_SIZE);
+    const maxX = Math.floor(Math.max(x1, x2) / GRID_SIZE);
+    const minY = Math.floor(Math.min(y1, y2) / GRID_SIZE);
+    const maxY = Math.floor(Math.max(y1, y2) / GRID_SIZE);
+    const cells = [];
+    for (let cx = minX; cx <= maxX; cx++) {
+        for (let cy = minY; cy <= maxY; cy++) {
+            cells.push(`${cx},${cy}`);
+        }
+    }
+    return cells;
+}
+
+// Checks a candidate segment against every previously drawn segment sharing
+// a grid cell, using true geometric intersection rather than endpoint proximity.
+function checkSegmentCollision(x1, y1, x2, y2) {
+    const checked = new Set();
+    for (const cell of cellsForSegment(x1, y1, x2, y2)) {
+        const segs = segmentGrid.get(cell);
+        if (!segs) continue;
+        for (const s of segs) {
+            if (checked.has(s)) continue;
+            checked.add(s);
+            if (segmentsIntersect(x1, y1, x2, y2, s.x1, s.y1, s.x2, s.y2)) return true;
+        }
+    }
     return false;
+}
+
+function addSegmentToGrid(x1, y1, x2, y2) {
+    const seg = { x1, y1, x2, y2 };
+    for (const cell of cellsForSegment(x1, y1, x2, y2)) {
+        if (!segmentGrid.has(cell)) segmentGrid.set(cell, []);
+        segmentGrid.get(cell).push(seg);
+    }
 }
 
 function drawSpider(x, y, size, angle, depth, params) {
@@ -78,10 +124,10 @@ function drawSpider(x, y, size, angle, depth, params) {
     for (let i = 0; i < params.legs; i++) {
         let legAngle = angle + (i * (Math.PI * 2) / params.legs);
         let seg = size * 0.33;
-        
+
         let kX = x + Math.cos(legAngle) * seg;
         let kY = y + Math.sin(legAngle) * seg;
-        
+
         let ankleAngle = legAngle + params.knee;
         let aX = kX + Math.cos(ankleAngle) * seg;
         let aY = kY + Math.sin(ankleAngle) * seg;
@@ -90,18 +136,27 @@ function drawSpider(x, y, size, angle, depth, params) {
         let fX = aX + Math.cos(footAngle) * seg;
         let fY = aY + Math.sin(footAngle) * seg;
 
-        // Check if the foot of this segment hits an existing path
-        let isColliding = checkCollision(fX, fY);
+        // Test every segment of this limb (hip-knee, knee-ankle, ankle-foot)
+        // for a true geometric crossing against all previously drawn segments,
+        // instead of only checking proximity of the final foot point.
+        const limb = [
+            [x, y, kX, kY],
+            [kX, kY, aX, aY],
+            [aX, aY, fX, fY]
+        ];
+        const isColliding = limb.some(([sx, sy, ex, ey]) => checkSegmentCollision(sx, sy, ex, ey));
 
         ctx.beginPath();
         ctx.strokeStyle = isColliding ? "red" : `hsl(${(depth * 40) + 20}, 80%, 60%)`;
         ctx.lineWidth = depth;
         ctx.moveTo(x, y);
-        ctx.lineTo(kX, kY); 
+        ctx.lineTo(kX, kY);
         ctx.lineTo(aX, aY);
         ctx.lineTo(fX, fY);
         ctx.stroke();
-        
+
+        limb.forEach(([sx, sy, ex, ey]) => addSegmentToGrid(sx, sy, ex, ey));
+
         // If it's not red (colliding), keep growing the crystal
         if (!isColliding) {
             drawSpider(fX, fY, size * params.scale, footAngle + params.rot, depth - 1, params);
@@ -110,7 +165,7 @@ function drawSpider(x, y, size, angle, depth, params) {
 }
 
 function draw() {
-    occupancyMap.clear(); // Clear memory for new slider position
+    segmentGrid = new Map(); // Clear memory for new slider position
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.translate(canvas.width / 2, canvas.height / 2);
